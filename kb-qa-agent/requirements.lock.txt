@@ -1,0 +1,21 @@
+# ============================================================
+# requirements.lock.txt —— 当前开发环境实测通过的固定版本
+# 生成方式：读取本机已安装版本（pip install -r requirements.txt 之后）
+# 用途：需要复现环境时使用 pip install -r requirements.lock.txt
+# 说明：requirements.txt 保留 >= 下限以便升级；本文件锁定精确版本。
+# Python 版本：3.12.7
+# ============================================================
+
+fastapi==0.141.1
+uvicorn==0.51.0
+python-multipart==0.0.32
+requests==2.34.2
+pypdf==6.14.2
+langchain-core==1.5.3
+langchain==1.3.14
+langchain-community==1.0.0a1
+langchain-text-splitters==1.1.2
+langchain-chroma==1.1.0
+langchain-ollama==1.1.0
+langgraph==1.2.10
+chromadb==1.5.9

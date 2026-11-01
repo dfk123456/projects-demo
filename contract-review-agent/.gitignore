@@ -1,0 +1,42 @@
+# 编译缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 本地数据 / 向量库 / 用户库（含私人课件、合同、密码散列，切勿上传）
+vector_store/
+knowledge_docs/
+data/
+users.db
+logs/
+*.db
+*.sqlite3
+*.json
+
+# 环境变量 / 密钥（保留 config.example.py 作为模板）
+.env
+config.py
+
+# 临时 / 调试文件
+_tmp_*.py
+*_tmp_*.py
+_build_ppt.js
+gen_ppt.py
+
+# 演示与文档产物
+_slides/
+docs/
+*.pptx
+*.png
+*.log
+*.npy
+
+# 操作系统
+.DS_Store
+Thumbs.db

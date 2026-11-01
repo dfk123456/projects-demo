@@ -1,0 +1,35 @@
+# ============================================================
+# requirements.txt
+# 项目：基于 LangGraph + Ollama 的离线专业知识库问答系统
+# 安装：pip install -r requirements.txt
+#
+# 说明：
+#   1) 以下为运行后端 / 前端 / 入库所需的全部 Python 依赖；
+#      下限为开发环境实测通过的主版本，精确版本见 requirements.lock.txt。
+#   2) Ollama 本身不需要 pip 安装，需单独下载部署（仅预留
+#      http://localhost:11434 接口地址，本项目不内置启动 Ollama）。
+#   3) 开发环境：Python 3.12.7
+# ============================================================
+
+# ---------- Web 后端 ----------
+fastapi>=0.141.0
+uvicorn>=0.51.0
+python-multipart>=0.0.32         # FastAPI 文件上传必需
+
+# ---------- HTTP 请求（联网检索工具使用） ----------
+requests>=2.34.0
+
+# ---------- 文档加载 ----------
+pypdf>=4.0.0                     # 解析 PDF
+
+# ---------- LangChain / LangGraph 生态 ----------
+langchain-core>=1.5.0
+langchain>=1.3.0
+langchain-community>=0.3.0       # 提供 PyPDFLoader / TextLoader
+langchain-text-splitters>=1.1.0  # 文本切分
+langchain-chroma>=1.1.0          # Chroma 向量库封装
+langchain-ollama>=1.1.0          # Ollama 大模型 / Embedding 调用
+langgraph>=1.2.0                 # 多智能体状态图编排
+
+# ---------- 向量数据库 ----------
+chromadb>=1.5.0

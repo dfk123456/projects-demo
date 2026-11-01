@@ -1,0 +1,39 @@
+# ============================================================
+# requirements.txt
+# 项目：长文档深度分析 Agent（法律合同审查系统）
+# 安装：pip install -r requirements.txt
+# 环境：Python 3.12.7（Win11 实测）
+# ============================================================
+
+# ---------- Web 服务 ----------
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-multipart>=0.0.9          # FastAPI 文件上传必需
+
+# ---------- HTTP 请求（调用外部大模型 API） ----------
+requests>=2.32.0
+
+# ---------- LangChain / LangGraph ----------
+langchain-core>=0.3.0
+langgraph>=0.2.0                 # 循环 Agent 工作流编排
+
+# ---------- 文档解析（优先级：unstructured > pdfplumber > pypdf）----------
+pypdf>=4.3.0
+pdfplumber>=0.11.0
+# unstructured>=0.15.0           # 技术约束指定；可选安装，装了会自动优先使用
+
+# ---------- 分词 / 向量计算（本地词法向量兜底）----------
+jieba>=0.42.1
+numpy>=1.26.0
+
+# ---------- 向量数据库（Milvus）----------
+pymilvus>=2.4.0                  # 支持 Milvus 服务 / Milvus Lite（Linux）；Windows 自动回退本地文件向量库
+
+# ---------- 文件存储（MinIO）----------
+minio>=7.2.0                     # 无 MinIO 服务时自动回退本地磁盘存储
+
+# ---------- Word 导出 ----------
+python-docx>=1.1.0
+
+# ---------- 样例文档生成（可选，用于验收测试）----------
+reportlab>=4.0.0

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>长文档深度分析 Agent · 合同风险审查系统</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div class="aurora"></div>
+
+<!-- ============ 顶部导航 ============ -->
+<header class="nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 5h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>
+          <path d="M14 5v5h5M8 13h8M8 17h5"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>长文档深度分析 Agent</h1>
+        <p>法律合同风险审查系统 · LangGraph 循环工作流 + 法条 RAG</p>
+      </div>
+    </div>
+
+    <div class="nav-tools">
+      <label class="select-field">
+        <span>审查模型</span>
+        <select id="modelSelect"></select>
+      </label>
+      <label class="select-field">
+        <span>向量模型</span>
+        <select id="embedSelect"></select>
+      </label>
+      <button class="btn ghost" id="btnPing" title="测试所选模型连通性">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>
+        </svg>连通测试
+      </button>
+      <div class="status-pill" id="statusPill"><i></i><span>连接中…</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ Hero ============ -->
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="badge">AI 辅助审查 · 仅供律师复核参考</span>
+      <h2>上百页合同，<em>几十秒</em>出审查意见</h2>
+      <p>上传超长 PDF 合同，循环 Agent 自动分段精读、识别风险条款、匹配法律法规，
+        生成可直接编辑与导出 Word 的结构化风险报告。</p>
+      <div class="hero-metrics" id="heroMetrics">
+        <div class="metric"><b id="mKb">—</b><span>法条知识</span></div>
+        <div class="metric"><b id="mBackend">—</b><span>向量库</span></div>
+        <div class="metric"><b id="mStorage">—</b><span>文件存储</span></div>
+        <div class="metric"><b id="mLimit">—</b><span>上传上限</span></div>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="card-float c1"><span>第 8.2 条</span><b>高额违约金</b><i>高</i></div>
+      <div class="card-float c2"><span>第 10.3 条</span><b>免责条款</b><i>高</i></div>
+      <div class="card-float c3"><span>第 12.1 条</span><b>期限不明</b><i>中</i></div>
+    </div>
+  </section>
+
+  <!-- ============ 步骤条 ============ -->
+  <div class="steps" id="stepsBar">
+    <div class="step active" data-step="1"><i>1</i><span>上传合同</span></div>
+    <div class="step" data-step="2"><i>2</i><span>选择模型</span></div>
+    <div class="step" data-step="3"><i>3</i><span>智能审查</span></div>
+    <div class="step" data-step="4"><i>4</i><span>编辑导出</span></div>
+  </div>
+
+  <div class="layout">
+    <!-- ============ 左列 ============ -->
+    <aside class="col-side">
+      <section class="panel">
+        <div class="panel-head">
+          <h3>上传合同</h3>
+          <span class="hint">PDF / DOCX / TXT</span>
+        </div>
+        <div class="dropzone" id="dropZone">
+          <input type="file" id="fileInput" accept=".pdf,.txt,.md,.docx" hidden />
+          <div class="dz-icon">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7">
+              <path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+            </svg>
+          </div>
+          <p class="dz-title">点击或拖拽文件到此处</p>
+          <p class="dz-sub">支持上百页超长文档，单个上限 <span id="maxMb">—</span></p>
+        </div>
+        <div class="file-chip hidden" id="fileChip">
+          <div class="fc-icon">📄</div>
+          <div class="fc-body">
+            <b id="fileName">—</b>
+            <span id="fileSize">—</span>
+          </div>
+          <button class="icon-btn" id="btnRemoveFile" title="移除">✕</button>
+        </div>
+        <button class="btn primary block" id="btnStart" disabled>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 4l14 8-14 8V4z"/>
+          </svg>开始智能审查
+        </button>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h3>分析流水线</h3></div>
+        <ul class="pipeline" id="pipeline">
+          <li data-node="parse"><i></i><b>文档解析</b><span>分页 + 重叠切分</span></li>
+          <li data-node="analyze_batch"><i></i><b>循环识别</b><span>片段循环送审</span></li>
+          <li data-node="enrich"><i></i><b>法条命中</b><span>RAG 检索依据</span></li>
+          <li data-node="recheck"><i></i><b>定向复核</b><span>存疑项复核循环</span></li>
+          <li data-node="aggregate"><i></i><b>汇总成文</b><span>去重排序 + 结论</span></li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h3>法条知识库</h3></div>
+        <div class="kb">
+          <div class="kb-num"><b id="kbCount">—</b><span>条已入库</span></div>
+          <button class="btn ghost small" id="btnRebuildKb">重建 / 增量入库</button>
+        </div>
+        <p class="hint pad">把自有法规文档（.md/.txt）放进 <code>knowledge_docs/</code> 后点击重建即可扩展。</p>
+      </section>
+    </aside>
+
+    <!-- ============ 右列 ============ -->
+    <section class="col-main">
+      <!-- 进度 -->
+      <section class="panel" id="progressPanel">
+        <div class="panel-head">
+          <h3>审查进度</h3>
+          <span class="hint" id="stageText">等待任务</span>
+        </div>
+        <div class="progress">
+          <div class="progress-track"><i id="progressBar"></i></div>
+          <div class="progress-meta"><span id="progressText">0%</span><span id="elapsedText">—</span></div>
+        </div>
+        <div class="console" id="logBox">
+          <div class="console-empty">点击「开始智能审查」后，这里会实时输出 Agent 的每一步动作。</div>
+        </div>
+      </section>
+
+      <!-- 报告 -->
+      <section class="panel" id="reportPanel">
+        <div class="panel-head">
+          <h3>风险审查报告</h3>
+          <div class="row" id="reportActions" style="display:none">
+            <button class="btn ghost small" id="btnAddRisk">+ 新增风险</button>
+            <button class="btn ghost small" id="btnSave">保存修改</button>
+            <button class="btn primary small" id="btnExport">导出 Word</button>
+            <button class="btn ghost small" id="btnExportMd">导出 MD</button>
+          </div>
+        </div>
+
+        <div class="empty-state" id="emptyTip">
+          <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.4">
+            <path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h5"/>
+          </svg>
+          <b>暂无报告</b>
+          <span>上传合同并启动审查后，报告将在这里呈现，可逐条编辑后导出 Word。</span>
+        </div>
+
+        <div id="reportBody" style="display:none">
+          <div class="stats" id="statCards"></div>
+
+          <div class="overall">
+            <div class="overall-level">
+              <label>整体风险等级</label>
+              <div class="level-picker" id="levelPicker">
+                <button data-level="高">高</button><button data-level="中">中</button><button data-level="低">低</button>
+              </div>
+              <select id="overallLevel" hidden><option>高</option><option>中</option><option>低</option></select>
+            </div>
+            <div class="overall-dist"><canvas id="distBar" height="10"></canvas><span id="distText">—</span></div>
+          </div>
+
+          <div class="form-block">
+            <label>审查结论</label>
+            <textarea id="summaryText" rows="4" placeholder="系统自动生成的审查结论，可直接修改…"></textarea>
+          </div>
+          <div class="form-block">
+            <label>整体处理建议 <em>（每行一条）</em></label>
+            <textarea id="adviceText" rows="4" placeholder="例如：优先谈判第 8.2 条违约金条款…"></textarea>
+          </div>
+
+          <div class="risk-toolbar">
+            <div class="filters" id="filters">
+              <button class="chip active" data-level="all">全部</button>
+              <button class="chip high" data-level="高">高风险</button>
+              <button class="chip mid" data-level="中">中风险</button>
+              <button class="chip low" data-level="低">低风险</button>
+            </div>
+            <input id="riskSearch" class="search" placeholder="搜索条款 / 类型 / 法条…" />
+          </div>
+
+          <div class="risks" id="riskList"></div>
+        </div>
+      </section>
+    </section>
+  </div>
+</main>
+
+<footer class="footer">
+  长文档深度分析 Agent · 合同风险审查系统 —— 报告由 AI 辅助生成，最终以执业律师复核意见为准。
+</footer>
+
+<div id="toast" class="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

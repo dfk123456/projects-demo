@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识库问答</title>
+<style>
+  :root {
+    --primary: #4f6ef7;
+    --primary-2: #7a5af8;
+    --primary-dark: #3f51d6;
+    --accent: #22c1a4;
+    --bg: #eef1f8;
+    --card: #ffffff;
+    --text: #171a26;
+    --text-soft: #3f465c;
+    --muted: #8a91a6;
+    --border: #e4e8f2;
+    --border-soft: #eef1f7;
+    --danger: #e05252;
+    --radius: 16px;
+    --shadow: 0 4px 18px rgba(23, 26, 38, .06);
+    --shadow-lg: 0 18px 48px rgba(23, 26, 38, .14);
+    --ring: 0 0 0 3px rgba(79, 110, 247, .14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 关键：ID 选择器里的 display 会盖掉 hidden 属性，这里显式兜底，
+     保证登录页与主界面同一时刻只显示一个（切换效果＝跳转到新页面） */
+  [hidden] { display: none !important; }
+  /* 视图切换时的淡入，让"进入新页面"更自然 */
+  .view { animation: viewIn .3s cubic-bezier(.22,.8,.3,1); }
+  @keyframes viewIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1000px 520px at 10% -8%, #dbe4ff 0%, rgba(219, 228, 255, 0) 62%),
+      radial-gradient(880px 480px at 94% 2%, #e9dcff 0%, rgba(233, 220, 255, 0) 58%),
+      radial-gradient(760px 420px at 62% 102%, #d7f2ec 0%, rgba(215, 242, 236, 0) 60%),
+      var(--bg);
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button { font-family: inherit; }
+  ::selection { background: rgba(79, 110, 247, .18); }
+
+  /* ================= 登录 / 注册 ================= */
+  #authView {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; position: relative; overflow: hidden;
+  }
+  /* 背景光斑：只做氛围渲染，不影响交互 */
+  #authView::before, #authView::after {
+    content: ""; position: absolute; border-radius: 50%;
+    opacity: .55; pointer-events: none;
+  }
+  #authView::before {
+    width: 340px; height: 340px; top: -100px; left: -80px;
+    background: radial-gradient(circle at 35% 35%, #8aa4ff, rgba(138, 164, 255, 0) 70%);
+    animation: floatY 9s ease-in-out infinite;
+  }
+  #authView::after {
+    width: 380px; height: 380px; bottom: -130px; right: -100px;
+    background: radial-gradient(circle at 60% 40%, #c193ff, rgba(193, 147, 255, 0) 70%);
+    animation: floatY 11s ease-in-out infinite reverse;
+  }
+  @keyframes floatY {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50%      { transform: translate3d(0, 20px, 0); }
+  }
+
+  .auth-card {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 412px;
+    padding: 36px 32px 26px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, .88);
+    backdrop-filter: blur(16px) saturate(1.15);
+    border: 1px solid rgba(255, 255, 255, .8);
+    box-shadow: 0 24px 60px rgba(31, 41, 80, .16);
+    animation: cardIn .42s cubic-bezier(.22,.8,.3,1);
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(14px) scale(.985); }
+    to   { opacity: 1; transform: none; }
+  }
+  /* 卡片顶部的一抹渐变高光 */
+  .auth-card::before {
+    content: ""; position: absolute; inset: 0 0 auto; height: 4px;
+    border-radius: 22px 22px 0 0;
+    background: linear-gradient(90deg, var(--primary), var(--primary-2) 55%, var(--accent));
+  }
+
+  .auth-brand { text-align: center; margin-bottom: 22px; }
+  .auth-logo {
+    width: 56px; height: 56px; margin: 0 auto 13px; border-radius: 18px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    color: #fff; font-size: 25px; font-weight: 700; letter-spacing: 1px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 24px rgba(79, 110, 247, .38);
+    position: relative;
+  }
+  .auth-logo::after {
+    content: ""; position: absolute; inset: 5px; border-radius: 13px;
+    border: 1px solid rgba(255, 255, 255, .35);
+  }
+  .auth-brand h1 { font-size: 21px; letter-spacing: .6px; font-weight: 650; }
+  .auth-sub { font-size: 13px; color: var(--muted); margin-top: 7px; }
+
+  .tabs {
+    display: flex; background: #eef1f8; border-radius: 12px;
+    padding: 4px; margin-bottom: 20px; gap: 4px;
+  }
+  .tab {
+    flex: 1; padding: 9px 0; border: none; background: transparent;
+    border-radius: 9px; font-size: 14px; color: var(--muted); cursor: pointer;
+    transition: color .18s, background .18s, box-shadow .18s;
+  }
+  .tab:hover { color: var(--text-soft); }
+  .tab.active {
+    background: #fff; color: var(--primary-dark); font-weight: 600;
+    box-shadow: 0 2px 10px rgba(31, 35, 48, .1);
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--muted);
+                 margin-bottom: 6px; letter-spacing: .2px; }
+  .field input {
+    width: 100%; padding: 12px 14px; font-size: 14px; color: var(--text);
+    border: 1px solid var(--border); border-radius: 12px; outline: none;
+    background: #fafbfe;
+    transition: border-color .18s, box-shadow .18s, background .18s;
+  }
+  .field input:hover { border-color: #d3dae9; }
+  .field input:focus {
+    border-color: var(--primary); background: #fff; box-shadow: var(--ring);
+  }
+  .btn-primary {
+    width: 100%; padding: 13px; margin-top: 8px; border: none; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    color: #fff; font-size: 15px; font-weight: 600; letter-spacing: 1px; cursor: pointer;
+    transition: transform .14s, box-shadow .2s, opacity .18s;
+    box-shadow: 0 8px 22px rgba(79, 110, 247, .32);
+  }
+  .btn-primary:hover { transform: translateY(-1px);
+                       box-shadow: 0 12px 26px rgba(79, 110, 247, .42); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+  .auth-msg {
+    min-height: 20px; margin-top: 12px; font-size: 13px; text-align: center;
+  }
+  .auth-msg.err { color: var(--danger); }
+  .auth-msg.ok { color: #2f9e5f; }
+  .auth-tip { margin-top: 16px; font-size: 12px; color: var(--muted);
+              text-align: center; line-height: 1.8;
+              padding-top: 14px; border-top: 1px dashed var(--border); }
+
+  /* ================= 主界面 ================= */
+  #appView { min-height: 100vh; display: flex; flex-direction: column; }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255, 255, 255, .78);
+    backdrop-filter: blur(14px) saturate(1.2);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 22px; display: flex; align-items: center;
+    justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 15px; }
+  .brand .logo {
+    width: 32px; height: 32px; border-radius: 10px; color: #fff;
+    font-size: 15px; font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(79, 110, 247, .32);
+  }
+  .brand-name {
+    background: linear-gradient(90deg, #2b3252, #4a55a8);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .user-area { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .user-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: linear-gradient(135deg, #eef1fd, #f4f0ff);
+    border: 1px solid #dfe4f6;
+    color: var(--primary-dark);
+    padding: 5px 12px; border-radius: 20px; font-weight: 600; font-size: 12.5px;
+  }
+  .user-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%;
+                       background: var(--accent); box-shadow: 0 0 0 3px rgba(34, 193, 168, .18); }
+  .btn-ghost {
+    padding: 6px 13px; border: 1px solid var(--border); background: #fff;
+    border-radius: 9px; color: var(--muted); font-size: 13px; cursor: pointer;
+    transition: color .18s, border-color .18s, background .18s, transform .14s;
+  }
+  .btn-ghost:hover { color: var(--primary-dark); border-color: #c9d4f5;
+                     background: #f7f9ff; transform: translateY(-1px); }
+
+  main { width: 100%; max-width: 940px; margin: 0 auto; padding: 20px 16px 34px;
+         flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+
+  /* 对话卡片：头部 + 消息区 + 输入区一体 */
+  .chat-shell { overflow: hidden; display: flex; flex-direction: column; }
+  .chat-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; border-bottom: 1px solid var(--border-soft);
+    background: linear-gradient(180deg, #fbfcff, #ffffff);
+  }
+  .chat-head-left {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 650; color: var(--text);
+  }
+  .dot-live {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    animation: pulse 2.2s infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(34, 193, 168, .45); }
+    70%  { box-shadow: 0 0 0 7px rgba(34, 193, 168, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 193, 168, 0); }
+  }
+  .chat-sub { font-size: 12px; color: var(--muted); }
+
+  #chatBox {
+    flex: 1; height: clamp(300px, 46vh, 620px); overflow-y: auto;
+    padding: 20px 18px;
+    display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth;
+    background: linear-gradient(180deg, #f7f9fd 0%, #fbfcff 45%, #ffffff 100%);
+  }
+  .msg {
+    display: flex; align-items: flex-end; gap: 9px;
+    animation: msgIn .26s cubic-bezier(.22,.8,.3,1);
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .msg.ai { justify-content: flex-start; }
+  /* row-reverse 让「头像 + 气泡」整体靠右，头像在最右 */
+  .msg.user { flex-direction: row-reverse; justify-content: flex-start; }
+  /* 头像用伪元素实现，无需改动 JS 生成的 DOM 结构 */
+  .msg::before {
+    content: "AI"; flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; letter-spacing: .5px; color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    box-shadow: 0 4px 12px rgba(79, 110, 247, .3);
+  }
+  .msg.user::before {
+    content: "我"; background: linear-gradient(135deg, #5f6880, #39415a);
+    box-shadow: 0 4px 12px rgba(57, 65, 90, .26);
+  }
+  .bubble {
+    max-width: 74%; padding: 12px 15px; font-size: 14.2px; line-height: 1.78;
+    word-break: break-word; transition: box-shadow .2s;
+  }
+  .msg.user .bubble {
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    color: #fff; border-radius: 16px 16px 6px 16px; white-space: pre-wrap;
+    box-shadow: 0 8px 20px rgba(79, 110, 247, .26);
+  }
+  .msg.ai .bubble {
+    background: #fff; border: 1px solid var(--border); color: var(--text-soft);
+    border-radius: 16px 16px 16px 6px; box-shadow: 0 2px 10px rgba(23, 26, 38, .05);
+  }
+  .bubble .meta {
+    font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: .5px;
+  }
+  .msg.user .bubble .meta { color: rgba(255, 255, 255, .78); text-align: right; }
+  .bubble.streaming .body::after {
+    content: ""; display: inline-block; width: 7px; height: 15px;
+    margin-left: 3px; vertical-align: -3px; border-radius: 1px;
+    background: var(--primary); animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Markdown 渲染 */
+  .bubble .md-h {
+    font-weight: 650; margin: 10px 0 5px; font-size: 14.5px; color: var(--text);
+    padding-left: 10px; border-left: 3px solid var(--primary); border-radius: 2px;
+  }
+  .bubble .md-li { padding-left: 14px; }
+  .bubble .md-gap { height: 8px; }
+  .bubble code { background: #edf1fb; color: #3f48c9; padding: 2px 6px; border-radius: 6px;
+                 font-family: Consolas, "Courier New", monospace; font-size: 13px; }
+  .bubble pre.md-code {
+    background: #1f2434; color: #dbe2f5; border: 1px solid #2a3044; border-radius: 10px;
+    padding: 12px 14px; margin: 9px 0; overflow-x: auto; white-space: pre-wrap;
+    word-break: break-word; font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px; line-height: 1.7;
+  }
+  .msg.user .bubble code { background: rgba(255, 255, 255, .22); color: #fff; }
+  .msg.user .bubble pre.md-code {
+    background: rgba(0, 0, 0, .16); border-color: rgba(255, 255, 255, .2); color: #fff;
+  }
+
+  /* 输入区 */
+  .composer {
+    padding: 12px 16px 14px; border-top: 1px solid var(--border-soft);
+    background: #fff; display: flex; flex-direction: column; gap: 10px;
+  }
+  .input-bar { display: flex; gap: 10px; }
+  #questionInput {
+    flex: 1; padding: 12px 16px; font-size: 14px; color: var(--text);
+    border: 1px solid var(--border); border-radius: 13px; outline: none;
+    background: #fafbfe;
+    transition: border-color .18s, box-shadow .18s, background .18s;
+  }
+  #questionInput::placeholder { color: #aab1c2; }
+  #questionInput:hover { border-color: #d3dae9; }
+  #questionInput:focus {
+    border-color: var(--primary); background: #fff; box-shadow: var(--ring);
+  }
+  .btn-send {
+    padding: 0 24px; height: 44px; border: none; border-radius: 13px; color: #fff;
+    font-size: 14px; font-weight: 600; letter-spacing: 1px; cursor: pointer;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    box-shadow: 0 8px 20px rgba(79, 110, 247, .3);
+    transition: transform .14s, box-shadow .2s, opacity .18s;
+  }
+  .btn-send:hover { transform: translateY(-1px);
+                    box-shadow: 0 12px 24px rgba(79, 110, 247, .4); }
+  .btn-send:active { transform: translateY(0); }
+  .btn-send:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-send.stop { background: linear-gradient(135deg, #ef5b5b, #d94444);
+                   box-shadow: 0 8px 20px rgba(223, 70, 70, .32); }
+
+  .opts { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+          font-size: 12.5px; color: var(--muted); padding: 0 2px; }
+  .opts label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .opts input[type=checkbox] { accent-color: var(--primary); width: 15px; height: 15px;
+                               cursor: pointer; }
+  .opts select {
+    font-size: 12px; padding: 5px 10px; border: 1px solid var(--border);
+    border-radius: 9px; background: #fafbfe; color: var(--text-soft);
+    cursor: pointer; outline: none; transition: border-color .18s, box-shadow .18s;
+  }
+  .opts select:hover { border-color: #c9d4f5; }
+  .opts select:focus { border-color: var(--primary); box-shadow: var(--ring); }
+  #statLine {
+    margin-left: auto; font-size: 11.5px; font-weight: 600;
+    color: var(--primary-dark); background: #eef1fd; border: 1px solid #e0e6fb;
+    padding: 3px 11px; border-radius: 20px;
+  }
+  #statLine:empty { display: none; }
+
+  /* 面板（上传/日志） */
+  .panel { padding: 16px 18px; font-size: 13px; }
+  .panel-title { font-weight: 650; margin-bottom: 12px; font-size: 13.5px;
+                 display: flex; align-items: center; gap: 8px; }
+  .panel-title::before {
+    content: ""; width: 3px; height: 14px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--primary), var(--primary-2));
+  }
+  .panel-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .panel-row select, .panel-row input[type=file] {
+    font-size: 12px; padding: 5px 8px; border: 1px solid var(--border);
+    border-radius: 10px; background: #fbfcfe; color: var(--text-soft);
+    max-width: 240px; cursor: pointer; outline: none;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .panel-row select:hover, .panel-row input[type=file]:hover { border-color: #c9d4f5; }
+  .panel-row select:focus { border-color: var(--primary); box-shadow: var(--ring); }
+  .panel-row input[type=file] { border-style: dashed; }
+  .panel-row input[type=file]::file-selector-button {
+    border: 1px solid var(--border); background: #fff; color: var(--text-soft);
+    padding: 5px 12px; border-radius: 8px; margin-right: 10px; cursor: pointer;
+    font-size: 12px; font-family: inherit; transition: color .18s, border-color .18s;
+  }
+  .panel-row input[type=file]::file-selector-button:hover {
+    color: var(--primary); border-color: var(--primary);
+  }
+  .btn-sm {
+    padding: 7px 14px; border-radius: 9px; border: 1px solid var(--border);
+    background: #fff; color: var(--text-soft); font-size: 12.5px; cursor: pointer;
+    transition: color .18s, border-color .18s, background .18s, transform .14s, box-shadow .18s;
+  }
+  .btn-sm:hover {
+    border-color: var(--primary); color: var(--primary-dark);
+    background: #f7f9ff; transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 110, 247, .16);
+  }
+  .btn-sm.danger { color: var(--danger); border-color: #f2d0d0; }
+  .btn-sm.danger:hover { background: #fff4f4; border-color: var(--danger); color: var(--danger);
+                         box-shadow: 0 4px 12px rgba(224, 82, 82, .14); }
+  #uploadMsg {
+    font-size: 12px; color: #2f9e5f; background: #eaf7ef; border: 1px solid #d6efe0;
+    padding: 3px 11px; border-radius: 20px;
+  }
+  #uploadMsg:empty { display: none; }
+  #uploadMsg.err { color: var(--danger); background: #fdeeee; border-color: #f6d6d6; }
+  #kbStat {
+    margin-top: 13px; padding: 11px 13px; border: 1px solid var(--border-soft);
+    background: linear-gradient(180deg, #f8fafe, #f3f6fc);
+    border-radius: 11px; font-size: 12px; color: var(--text-soft); line-height: 1.8;
+  }
+
+  .log-panel {
+    background: linear-gradient(180deg, #22263a, #1c2030);
+    color: #d7dae0; border: 1px solid #2a2f42;
+    box-shadow: 0 8px 26px rgba(23, 26, 38, .16);
+  }
+  .log-head {
+    padding: 12px 16px; cursor: pointer; user-select: none; display: flex;
+    justify-content: space-between; align-items: center; font-size: 12.5px;
+    border-radius: var(--radius); transition: background .18s;
+  }
+  .log-head:hover { background: rgba(255, 255, 255, .04); }
+  .log-head span:first-child {
+    color: #a9b6cc; display: flex; align-items: center; gap: 8px;
+  }
+  .log-head span:first-child::before {
+    content: ""; width: 3px; height: 13px; border-radius: 2px;
+    background: linear-gradient(180deg, #7aa2ff, #22c1a4);
+  }
+  #logToggle {
+    font-size: 11.5px; color: #cfd6e4; background: #2b3145;
+    border: 1px solid #363d54; padding: 3px 11px; border-radius: 20px;
+  }
+  .log-body { display: none; padding: 0 16px 14px; }
+  .log-panel.open .log-body { display: block; animation: viewIn .2s ease; }
+  #logArea {
+    white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 300px;
+    overflow-y: auto; font-family: Consolas, "Courier New", monospace; font-size: 12px;
+    line-height: 1.75; color: #c7d0e6;
+    background: #161a27; border: 1px solid #242a3c; border-radius: 11px; padding: 12px 14px;
+  }
+
+  /* 滚动条 */
+  #chatBox::-webkit-scrollbar, #logArea::-webkit-scrollbar { width: 8px; }
+  #chatBox::-webkit-scrollbar-track, #logArea::-webkit-scrollbar-track { background: transparent; }
+  #chatBox::-webkit-scrollbar-thumb {
+    background: rgba(120, 132, 160, .26); border-radius: 8px;
+  }
+  #chatBox::-webkit-scrollbar-thumb:hover { background: rgba(120, 132, 160, .45); }
+  #logArea::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .16); border-radius: 8px; }
+  #logArea::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .28); }
+
+  @media (max-width: 640px) {
+    .bubble { max-width: 84%; }
+    .panel-row select, .panel-row input[type=file] { max-width: 100%; }
+    #chatBox { height: clamp(260px, 44vh, 520px); padding: 16px 12px; }
+    .btn-send { padding: 0 18px; }
+    .chat-sub { display: none; }
+    .topbar { padding: 10px 14px; }
+    main { padding: 14px 12px 26px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== 登录 / 注册 ==================== -->
+<div id="authView" class="view">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-logo">知</div>
+      <h1>知识库问答</h1>
+      <p class="auth-sub" id="authSub">登录后可继续使用离线智能问答</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="login">登录</button>
+      <button class="tab" data-tab="register">注册</button>
+    </div>
+
+    <form id="loginForm" autocomplete="off">
+      <div class="field">
+        <label>用户名</label>
+        <input id="loginUser" type="text" placeholder="请输入用户名" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input id="loginPwd" type="password" placeholder="请输入密码" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="loginBtn" type="submit">登 录</button>
+    </form>
+
+    <form id="registerForm" autocomplete="off" hidden>
+      <div class="field">
+        <label>用户名（3~20 位，中英文/数字/下划线）</label>
+        <input id="regUser" type="text" placeholder="请输入用户名">
+      </div>
+      <div class="field">
+        <label>昵称（可选）</label>
+        <input id="regNick" type="text" placeholder="显示名称，留空同用户名">
+      </div>
+      <div class="field">
+        <label>密码（至少 6 位）</label>
+        <input id="regPwd" type="password" placeholder="请设置密码">
+      </div>
+      <div class="field">
+        <label>确认密码</label>
+        <input id="regPwd2" type="password" placeholder="请再次输入密码">
+      </div>
+      <button class="btn-primary" id="regBtn" type="submit">注 册</button>
+    </form>
+
+    <div class="auth-msg" id="authMsg"></div>
+    <p class="auth-tip" id="authTip">账号保存在本机服务端的 users.db 中<br>仅面向本机 / 内网使用</p>
+  </div>
+</div>
+
+<!-- ==================== 主界面 ==================== -->
+<div id="appView" class="view" hidden>
+  <header class="topbar">
+    <div class="brand"><span class="logo">知</span><span class="brand-name">知识库问答</span></div>
+    <div class="user-area">
+      <span class="user-chip" id="userChip">用户</span>
+      <button class="btn-ghost" id="logoutBtn">退出登录</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="chat-shell card">
+      <div class="chat-head">
+        <div class="chat-head-left"><span class="dot-live"></span>智能问答</div>
+        <span class="chat-sub">离线检索优先 · 回答标注来源 · 推理链路可展开</span>
+      </div>
+
+      <div id="chatBox"></div>
+
+      <div class="composer">
+        <div class="input-bar">
+          <input id="questionInput" type="text" placeholder="请输入你的问题，回车发送…">
+          <button class="btn-send" id="sendBtn">发送</button>
+        </div>
+
+        <div class="opts">
+          <label>模型来源
+            <select id="providerSel">
+              <option value="local">本地 Ollama（数据不出内网）</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="onlineChk"> 允许联网检索（仅本地资料不足且为前沿技术时触发）</label>
+          <button class="btn-ghost" id="newChatBtn">新会话</button>
+          <span id="statLine"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="panel-title">知识库管理<span style="font-weight:400;color:var(--muted)">（上传 / 删除，增量入库不重建）</span></div>
+      <div class="panel-row">
+        <input type="file" id="fileInput" accept=".pdf,.txt">
+        <select id="kbSelect">
+          <option value="tech">库1：大模型技术</option>
+          <option value="math">库2：深度学习数学</option>
+        </select>
+        <button class="btn-sm" id="uploadBtn">上传入库</button>
+        <select id="fileListSelect"><option value="">（选择要删除的文件）</option></select>
+        <button class="btn-sm danger" id="delBtn">删除该文件</button>
+        <span id="uploadMsg"></span>
+      </div>
+      <div id="kbStat">知识库状态加载中…</div>
+    </section>
+
+    <section class="card log-panel" id="logPanel">
+      <div class="log-head" id="logHead">
+        <span>推理日志（点击展开 / 折叠，实时展示 Agent 推理链路）</span>
+        <span id="logToggle">展开 ▾</span>
+      </div>
+      <div class="log-body"><pre id="logArea">（暂无日志）</pre></div>
+    </section>
+  </main>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   1) 登录注册：登录后才能使用问答与入库
+   2) 流式输出：SSE 推送推理日志与回答增量
+   3) Markdown 渲染：答案按标题/列表/代码块排版
+   4) 会话隔离：session_id 存 localStorage，可"新会话"清空
+   5) 知识库管理：上传、删除、状态展示
+   ============================================================ */
+const authView   = document.getElementById("authView");
+const appView    = document.getElementById("appView");
+const authMsg    = document.getElementById("authMsg");
+const authSub    = document.getElementById("authSub");
+const userChip   = document.getElementById("userChip");
+const logoutBtn  = document.getElementById("logoutBtn");
+
+const chatBox     = document.getElementById("chatBox");
+const questionBox = document.getElementById("questionInput");
+const sendBtn     = document.getElementById("sendBtn");
+const newChatBtn  = document.getElementById("newChatBtn");
+const onlineChk   = document.getElementById("onlineChk");
+const fileInput   = document.getElementById("fileInput");
+const kbSelect    = document.getElementById("kbSelect");
+const uploadBtn   = document.getElementById("uploadBtn");
+const fileListSel = document.getElementById("fileListSelect");
+const delBtn      = document.getElementById("delBtn");
+const uploadMsg   = document.getElementById("uploadMsg");
+const kbStat      = document.getElementById("kbStat");
+const logPanel    = document.getElementById("logPanel");
+const logHead     = document.getElementById("logHead");
+const logToggle   = document.getElementById("logToggle");
+const logArea     = document.getElementById("logArea");
+const statLine    = document.getElementById("statLine");
+const providerSel = document.getElementById("providerSel");
+
+const WELCOME = "你好，我是离线专业知识库问答助手。\n"
+  + "可询问：LangChain / LangGraph / RAG / Agent / Ollama 等大模型技术问题；\n"
+  + "或卷积公式、矩阵、概率、损失函数等深度学习数学问题。\n"
+  + "可在下方「知识库管理」上传课件（PDF/TXT）到对应库，即可开始离线检索问答。";
+
+let token     = localStorage.getItem("kb_token") || "";
+let username  = localStorage.getItem("kb_user") || "";
+let sessionId = localStorage.getItem("kb_session_id") || "";
+let logCount  = 0;
+let controller = null;      // 停止生成用
+
+/* ---------------- 通用请求 ---------------- */
+async function api(path, options) {
+  const resp = await fetch(path, options);
+  if (resp.status === 401) { onUnauthorized(); throw new Error("登录已失效"); }
+  return resp;
+}
+
+function onUnauthorized() {
+  clearAuth();
+  showAuth("登录已失效，请重新登录。");
+}
+
+function clearAuth() {
+  token = ""; username = "";
+  localStorage.removeItem("kb_token");
+  localStorage.removeItem("kb_user");
+}
+
+function showAuth(msg) {
+  authView.hidden = false;
+  appView.hidden = true;
+  if (msg) setAuthMsg(msg, true);
+}
+
+function showApp() {
+  authView.hidden = true;
+  appView.hidden = false;
+  userChip.textContent = username || "用户";
+  if (!chatBox.children.length) appendMsg("ai", WELCOME);
+  loadKbStatus();
+  loadModelStatus();
+  questionBox.focus();
+}
+
+function setAuthMsg(text, isErr) {
+  authMsg.textContent = text || "";
+  authMsg.className = "auth-msg" + (isErr ? " err" : " ok");
+}
+
+/* ---------------- 登录 / 注册交互 ---------------- */
+document.querySelectorAll(".tab").forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
+    tab.classList.add("active");
+    const isLogin = tab.dataset.tab === "login";
+    document.getElementById("loginForm").hidden = !isLogin;
+    document.getElementById("registerForm").hidden = isLogin;
+    setAuthMsg("", false);
+  });
+});
+
+document.getElementById("loginForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const user = document.getElementById("loginUser").value.trim();
+  const pwd = document.getElementById("loginPwd").value;
+  if (!user || !pwd) { setAuthMsg("请输入用户名和密码。", true); return; }
+
+  document.getElementById("loginBtn").disabled = true;
+  setAuthMsg("登录中…", false);
+  try {
+    const resp = await fetch("/auth/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: user, password: pwd })
+    });
+    const data = await resp.json();
+    if (!resp.ok) { setAuthMsg(data.detail || "登录失败。", true); return; }
+    token = data.token; username = data.nickname || data.username;
+    localStorage.setItem("kb_token", token);
+    localStorage.setItem("kb_user", username);
+    document.getElementById("loginPwd").value = "";
+    setAuthMsg("登录成功", false);
+    showApp();
+  } catch (err) {
+    setAuthMsg("网络请求失败：" + err.message, true);
+  } finally {
+    document.getElementById("loginBtn").disabled = false;
+  }
+});
+
+document.getElementById("registerForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const user = document.getElementById("regUser").value.trim();
+  const nick = document.getElementById("regNick").value.trim();
+  const pwd = document.getElementById("regPwd").value;
+  const pwd2 = document.getElementById("regPwd2").value;
+  if (!user || !pwd) { setAuthMsg("请输入用户名和密码。", true); return; }
+  if (pwd !== pwd2) { setAuthMsg("两次输入的密码不一致。", true); return; }
+
+  document.getElementById("regBtn").disabled = true;
+  setAuthMsg("注册中…", false);
+  try {
+    const resp = await fetch("/auth/register", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: user, password: pwd, nickname: nick })
+    });
+    const data = await resp.json();
+    if (!resp.ok) { setAuthMsg(data.detail || "注册失败。", true); return; }
+    setAuthMsg("注册成功，请登录。", false);
+    // 切到登录页并预填用户名
+    document.querySelector('.tab[data-tab="login"]').click();
+    document.getElementById("loginUser").value = user;
+    document.getElementById("loginPwd").focus();
+  } catch (err) {
+    setAuthMsg("网络请求失败：" + err.message, true);
+  } finally {
+    document.getElementById("regBtn").disabled = false;
+  }
+});
+
+logoutBtn.addEventListener("click", async function () {
+  try {
+    await fetch("/auth/logout", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token })
+    });
+  } catch (e) { /* 忽略 */ }
+  clearAuth();
+  chatBox.innerHTML = "";
+  showAuth("已退出登录。");
+});
+
+/* ---------------- 启动流程 ---------------- */
+async function bootstrap() {
+  try {
+    const resp = await fetch("/auth/status");
+    const st = await resp.json();
+    if (!st.auth_required) { username = "本机用户"; showApp(); return; }
+    if (st.users === 0) {
+      authSub.textContent = "欢迎使用，请先注册一个账号";
+      document.querySelector('.tab[data-tab="register"]').click();
+    }
+    if (!token) { showAuth(""); return; }
+    const me = await api("/auth/me?token=" + encodeURIComponent(token));
+    const data = await me.json();
+    username = data.username || username;
+    showApp();
+  } catch (err) {
+    showAuth("");
+  }
+}
+
+/* ---------------- Markdown 渲染（先转义防注入） ---------------- */
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function mdInline(s) {
+  return s.replace(/`([^`]+)`/g, "<code>$1</code>")
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+function renderMarkdown(text) {
+  const lines = escapeHtml(text || "").split("\n");
+  let html = "", inCode = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*```/.test(line)) {
+      html += inCode ? "</pre>" : "<pre class='md-code'>";
+      inCode = !inCode; continue;
+    }
+    if (inCode) { html += line + "\n"; continue; }
+    let m = line.match(/^\s*(#{1,6})\s+(.*)$/);
+    if (m) { html += "<div class='md-h'>" + mdInline(m[2]) + "</div>"; continue; }
+    m = line.match(/^\s*[-*]\s+(.*)$/);
+    if (m) { html += "<div class='md-li'>• " + mdInline(m[1]) + "</div>"; continue; }
+    m = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    if (m) { html += "<div class='md-li'>" + m[1] + ". " + mdInline(m[2]) + "</div>"; continue; }
+    html += (line.trim() === "") ? "<div class='md-gap'></div>"
+                                 : "<div>" + mdInline(line) + "</div>";
+  }
+  if (inCode) html += "</pre>";
+  return html;
+}
+
+/* ---------------- 消息渲染 ---------------- */
+function appendMsg(role, text) {
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + role;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = role === "user" ? "我" : "AI 助手";
+  const body = document.createElement("div");
+  body.className = "body";
+  body.textContent = text;
+  bubble.appendChild(meta); bubble.appendChild(body);
+  wrap.appendChild(bubble); chatBox.appendChild(wrap);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  return { bubble: bubble, body: body, text: text };
+}
+
+function setAiText(ai, text) {
+  ai.text = text;
+  ai.body.innerHTML = renderMarkdown(text);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+/* ---------------- 日志 ---------------- */
+logHead.addEventListener("click", function () {
+  logPanel.classList.toggle("open");
+  logToggle.textContent = logPanel.classList.contains("open") ? "收起 ▴" : "展开 ▾";
+});
+function resetLog() { logCount = 0; logArea.textContent = ""; }
+function appendLogLine(text) { logArea.textContent += text + "\n"; }
+
+/* ---------------- 流式问答 ---------------- */
+function handleEvent(payload, ai) {
+  if (payload.type === "log") {
+    logCount += 1;
+    appendLogLine("[" + logCount + "] (" + payload.kind + ") " + payload.title
+                  + "\n     " + payload.content);
+  } else if (payload.type === "status") {
+    appendLogLine("[状态] " + payload.text);
+    if (ai.body.dataset.started !== "1") setAiText(ai, payload.text + "…");
+  } else if (payload.type === "token") {
+    if (ai.body.dataset.started !== "1") {
+      ai.body.dataset.started = "1";
+      ai.bubble.classList.add("streaming");
+      ai.text = "";
+    }
+    setAiText(ai, (ai.text || "") + payload.text);
+  } else if (payload.type === "done") {
+    if (!(ai.text || "").trim()) setAiText(ai, payload.answer || "（空回复）");
+    ai.bubble.classList.remove("streaming");
+    if (payload.session_id) {
+      sessionId = payload.session_id;
+      localStorage.setItem("kb_session_id", sessionId);
+    }
+  } else if (payload.type === "error") {
+    ai.bubble.classList.remove("streaming");
+    setAiText(ai, "出错：" + payload.text);
+  }
+}
+
+function setBusy(busy) {
+  if (busy) { sendBtn.textContent = "停止"; sendBtn.classList.add("stop"); }
+  else { sendBtn.textContent = "发送"; sendBtn.classList.remove("stop"); }
+}
+
+async function sendQuestion() {
+  if (controller) { controller.abort(); return; }
+  const question = questionBox.value.trim();
+  if (!question) return;
+
+  appendMsg("user", question);
+  questionBox.value = "";
+  statLine.textContent = "";
+
+  const ai = appendMsg("ai", "");
+  ai.text = "";
+  resetLog();
+
+  controller = new AbortController();
+  setBusy(true);
+  const startedAt = Date.now();
+  try {
+    const resp = await fetch("/chat_stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question: question,
+        enable_online_search: onlineChk.checked,
+        session_id: sessionId,
+        token: token,
+        provider: providerSel ? providerSel.value : "local"
+      }),
+      signal: controller.signal
+    });
+    if (resp.status === 401) { onUnauthorized(); return; }
+    if (!resp.ok || !resp.body) { setAiText(ai, "请求失败（HTTP " + resp.status + "）"); return; }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buffer.indexOf("\n\n")) !== -1) {
+        const frame = buffer.slice(0, idx).trim();
+        buffer = buffer.slice(idx + 2);
+        if (!frame.startsWith("data:")) continue;
+        let payload = null;
+        try { payload = JSON.parse(frame.slice(5).trim()); } catch (e) { continue; }
+        if (payload) handleEvent(payload, ai);
+      }
+    }
+    statLine.textContent = "本次用时 " + ((Date.now() - startedAt) / 1000).toFixed(1) + "s";
+  } catch (err) {
+    if (err.name === "AbortError") {
+      setAiText(ai, (ai.text || "") + "\n\n（已停止生成）");
+      statLine.textContent = "已停止";
+    } else {
+      setAiText(ai, "网络请求失败：" + err.message);
+    }
+  } finally {
+    controller = null;
+    ai.bubble.classList.remove("streaming");
+    setBusy(false);
+    questionBox.focus();
+  }
+}
+
+sendBtn.addEventListener("click", sendQuestion);
+questionBox.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") sendQuestion();
+});
+
+/* ---------------- 模型来源（本地 / 外部 API） ---------------- */
+async function loadModelStatus() {
+  try {
+    const resp = await fetch("/model_status");
+    const data = await resp.json();
+    providerSel.innerHTML = "";
+    (data.providers || []).forEach(function (p) {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name + (p.available ? "" : " · " + p.note);
+      opt.disabled = !p.available;      // 未配密钥的不可选
+      providerSel.appendChild(opt);
+    });
+    providerSel.value = data.default || "local";
+  } catch (e) {
+    providerSel.value = "local";        // 取不到就用最安全的本地模式
+  }
+}
+
+let externalWarned = false;
+providerSel.addEventListener("change", function () {
+  if (providerSel.value !== "local" && !externalWarned) {
+    externalWarned = true;
+    const label = providerSel.options[providerSel.selectedIndex].text;
+    alert("已切换到外部模型：" + label + "\n\n本次的问题与本地检索片段将发送至该服务商，"
+        + "由其模型生成答案。\n若资料涉密，请切回「本地 Ollama」。");
+  }
+});
+
+/* ---------------- 新会话 ---------------- */
+newChatBtn.addEventListener("click", function () {
+  if (controller) { controller.abort(); controller = null; }
+  if (sessionId) {
+    fetch("/clear_history", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId })
+    }).catch(function () {});
+  }
+  sessionId = "";
+  localStorage.removeItem("kb_session_id");
+  chatBox.innerHTML = "";
+  resetLog();
+  logArea.textContent = "（暂无日志）";
+  statLine.textContent = "已开启新会话";
+  appendMsg("ai", WELCOME);
+});
+
+/* ---------------- 知识库状态与删除 ---------------- */
+function renderKbStatus(data) {
+  const fmt = function (x, label) {
+    const names = (x.files || []).map(function (f) { return f.name; }).join("、") || "（无）";
+    return label + "：" + (x.chunks || 0) + " 块（" + names + "）";
+  };
+  kbStat.textContent = fmt(data.tech, "库1 大模型技术")
+                     + "　|　" + fmt(data.math, "库2 深度学习数学");
+  updateFileList(data);
+}
+
+function updateFileList(data) {
+  const files = ((data || {})[kbSelect.value] || {}).files || [];
+  fileListSel.innerHTML = "";
+  if (!files.length) {
+    const opt = document.createElement("option");
+    opt.value = ""; opt.textContent = "（该库暂无文件）";
+    fileListSel.appendChild(opt); return;
+  }
+  files.forEach(function (f) {
+    const opt = document.createElement("option");
+    opt.value = f.name;
+    opt.textContent = f.name + "（" + f.chunks + " 块）";
+    fileListSel.appendChild(opt);
+  });
+}
+
+async function loadKbStatus() {
+  try {
+    const resp = await api("/kb_status");
+    const data = await resp.json();
+    renderKbStatus(data);
+  } catch (e) {
+    kbStat.textContent = "知识库状态获取失败";
+  }
+}
+
+kbSelect.addEventListener("change", loadKbStatus);
+
+delBtn.addEventListener("click", async function () {
+  const filename = fileListSel.value;
+  if (!filename) { showUploadMsg("请先选择要删除的文件。", true); return; }
+  if (!confirm("确认删除「" + filename + "」在知识库中的全部文档块？\n需要时重新上传同一文件即可恢复。")) return;
+
+  delBtn.disabled = true;
+  showUploadMsg("删除中…", false);
+  try {
+    const resp = await api("/kb_file", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kb: kbSelect.value, filename: filename, token: token })
+    });
+    const data = await resp.json();
+    if (!resp.ok) { showUploadMsg(data.detail || "删除失败。", true); }
+    else { showUploadMsg(data.message || "已删除。", false); loadKbStatus(); }
+  } catch (err) {
+    showUploadMsg("网络请求失败：" + err.message, true);
+  } finally {
+    delBtn.disabled = false;
+  }
+});
+
+/* ---------------- 上传入库 ---------------- */
+uploadBtn.addEventListener("click", async function () {
+  const file = fileInput.files[0];
+  if (!file) { showUploadMsg("请先选择 PDF / TXT 文件。", true); return; }
+
+  uploadBtn.disabled = true;
+  showUploadMsg("上传并入库中…", false);
+  const form = new FormData();
+  form.append("file", file);
+  form.append("kb", kbSelect.value);
+  form.append("token", token);
+
+  try {
+    const resp = await fetch("/upload_file", { method: "POST", body: form });
+    if (resp.status === 401) { onUnauthorized(); return; }
+    const data = await resp.json();
+    if (!resp.ok) { showUploadMsg(data.detail || "入库失败。", true); }
+    else { showUploadMsg(data.message || "上传成功。", false); loadKbStatus(); }
+  } catch (err) {
+    showUploadMsg("网络请求失败：" + err.message, true);
+  } finally {
+    uploadBtn.disabled = false;
+    fileInput.value = "";
+  }
+});
+
+function showUploadMsg(text, isErr) {
+  uploadMsg.textContent = text;
+  uploadMsg.className = isErr ? "err" : "";
+}
+
+/* ---------------- 启动 ---------------- */
+bootstrap();
+</script>
+</body>
+</html>
